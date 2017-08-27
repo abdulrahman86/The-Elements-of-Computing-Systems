@@ -4,7 +4,7 @@
 // File name: projects/05/Computer.hdl
 
 /**
- * The HACK computer, including CPU, ROM and RAM.
+ * The full HACK computer, including CPU, ROM and RAM.
  * When reset is 0, the program stored in the computer's ROM executes.
  * When reset is 1, the execution of the program restarts. 
  * Thus, to start a program’s execution, reset must be pushed "up" (1)
@@ -20,4 +20,7 @@ CHIP Computer {
 
     PARTS:
     // Put your code here.
+    ROM32K(address=NEXTINSTRUCTION, out=INSTRUCTION);
+    Memory(in=DATA, load=WRITEM, address=DATAADRESS, out=MEMORYINPUT);
+    CPU(instruction=INSTRUCTION, reset=reset, inM=MEMORYINPUT, outM=DATA, writeM=WRITEM, addressM=DATAADRESS, pc=NEXTINSTRUCTION);
 }

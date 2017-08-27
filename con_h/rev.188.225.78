@@ -1,0 +1,15 @@
+;
+; BIND data file for local loopback interface
+;
+$TTL	3600
+@	IN	SOA	ns1.huvu.ru. support.huvu.ru. (
+		     2017071401		; Serial
+			   1250		; Refresh
+			    130		; Retry
+			1209600		; Expire
+			   3600 )	; Negative Cache TTL
+;
+
+@       IN      NS      ns1.
+4       IN      PTR     ns1.huvu.ru.
+5       IN      PTR     huvu.ru.

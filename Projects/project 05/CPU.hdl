@@ -1,30 +1,3 @@
-// This file is part of the materials accompanying the book 
-// "The Elements of Computing Systems" by Nisan and Schocken, 
-// MIT Press. Book site: www.idc.ac.il/tecs
-// File name: projects/05/CPU.hdl
-
-/**
- * The Central Processing unit (CPU).
- * Consists of an ALU and a set of registers, designed to fetch and 
- * execute instructions written in the Hack machine language.
- * In particular, functions as follows:
- * Executes the inputted instruction according to the Hack machine 
- * language specification. The D and A in the language specification
- * refer to CPU-resident registers, while M refers to the external
- * memory location addressed by A, i.e. to Memory[A]. The inM input 
- * holds the value of this location. If the current instruction needs 
- * to write a value to M, the value is placed in outM, the address 
- * of the target location is placed in the addressM output, and the 
- * writeM control bit is asserted. (When writeM=0, any value may 
- * appear in outM). The outM and writeM outputs are combinational: 
- * they are affected instantaneously by the execution of the current 
- * instruction. The addressM and pc outputs are clocked: although they 
- * are affected by the execution of the current instruction, they commit 
- * to their new values only in the next time unit. If reset=1 then the 
- * CPU jumps to address 0 (i.e. sets pc=0 in next time unit) rather 
- * than to the address resulting from executing the current instruction. 
- */
-
 CHIP CPU {
 
     IN  inM[16],         // M value input  (M = contents of RAM[A])
@@ -40,4 +13,74 @@ CHIP CPU {
 
      PARTS:
     // Put your code here.
+    //Register(in=instruction, load=instruction[15], 
+    //        out[15]=cInstI, 
+    //        out[12]=cInstA, 
+    //        out[11]=cInstCZX, out[10]=cInstCNX, out[9]=cInstCZY, out[8]=cInstCNY, out[7]=cInstCF, out[6]=cInstCNO, 
+    //        out[5]=cInstDA, out[4]=cIntDD, out[3]=writeM,
+    //        out[2]=cIntJL, out[1]=cIntJE, out[0]=cIntJG); // Get the control bits, that will be used in the CPU
+
+
+    And(a=instruction[15], b=instruction[15], out=cInstI);
+    And(a=instruction[12], b=instruction[15], out=cInstA);
+
+    And(a=instruction[11], b=instruction[15], out=cInstCZX);
+    And(a=instruction[10], b=instruction[15], out=cInstCNX);
+    And(a=instruction[9],  b=instruction[15], out=cInstCZY);
+    And(a=instruction[8],  b=instruction[15], out=cInstCNY);
+    And(a=instruction[7],  b=instruction[15], out=cInstCF);
+    And(a=instruction[6],  b=instruction[15], out=cInstCNO);
+
+    And(a=instruction[5],  b=instruction[15], out=cInstDA);
+    And(a=instruction[4],  b=instruction[15], out=cIntDD);
+    //And(a=instruction[3],  b=instruction[15], out=cIntDM);
+    And(a=instruction[3],  b=instruction[15], out=writeM); // Maybe MISTAKE
+
+    And(a=instruction[2],  b=instruction[15], out=cIntJL);
+    And(a=instruction[1],  b=instruction[15], out=cIntJE);
+    And(a=instruction[0],  b=instruction[15], out=cIntJG);
+
+
+    // ==================================================================================================
+    // CONTROL - i xx a cccccc ddd jjj
+    // CONTROL [15]     - i      - 1 here means it is a C-Instruction
+    // CONTROL [13..14] - xx     - NOT USED
+    // CONTROL [12]     - a      - A or M. Value of A REGISTER or value of Memory pointed by A REGISTER
+    // CONTROL [6..11]  - cccccc - Operation. Sets operations ALU is supposed to do
+    // CONTROL [3..5]   - ddd    - Destination. Where the computed value should be stored
+    // CONTROL [0..2]   - jjj    - Jump. Specifies the condition of the JUMP. If it's supposed to accure.
+    // ==================================================================================================
+
+    // A REGISTER
+    Mux16(a=instruction, b=ALURESULT, sel=cInstDA, out=AREGCONTENT);
+
+    // DRegister
+    DRegister(in=ALURESULT, load=cIntDD, out=DINPUT);
+
+    Not(in=cInstI, out=NotcInstI); // If instruction[15] is 0, we want write instruction to A REGISTER. 
+    Or(a=NotcInstI, b=cInstDA, out=WRITEA); // If cInstDA is 1 we also want to write to A REGISTER
+    ARegister(in=AREGCONTENT, load=WRITEA, out=AREG, out[0..14]=addressM);
+
+    // Use Memory or A REGISTER
+    Mux16(a=AREG, b=inM, sel=cInstA, out=AMINPUT);
+
+    ALU(x=DINPUT, y=AMINPUT, 
+        zx=cInstCZX, nx=cInstCNX, zy=cInstCZY, ny=cInstCNY, f=cInstCF, no=cInstCNO, 
+        out=ALURESULT, zr=ALUzr, ng=ALUng, out=outM);
+
+    // PC
+    // Check if ALU answer if ZERO or NEGATIVE
+    Or(a=ALUng, b=ALUzr, out=ALUzrORng);
+    // Bit for ALU answer being positive
+    Not(in=ALUzrORng, out=ALUpositive);
+    // If ALU positive and JMP[0] == 0, - JUMP
+    And(a=cIntJG, b=ALUpositive, out=JMP0);
+    // if ALU zero and JMP[1] == 1, - JUMP
+    And(a=cIntJE, b=ALUzr, out=JMP1);
+    // if ALU negative and JMP[2] == 1, - JUMP
+    And(a=cIntJL, b=ALUng, out=JMP2);
+    // If any of JUMP conditions are 1:
+    Or4Way(in[0]=false, in[1]=JMP0, in[2]=JMP1, in[3]=JMP2, out=JUMPANS);
+
+    PC(in=AREG, load=JUMPANS, inc=true, reset=reset, out[0..14]=pc, out[15]=false);
 }

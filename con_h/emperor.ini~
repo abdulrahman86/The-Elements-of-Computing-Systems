@@ -1,0 +1,3 @@
+[uwsgi]
+emperor = /etc/uwsgi/vassals
+emperor-tyrant = true

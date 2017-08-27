@@ -1,9 +1,10 @@
-// This file is part of the materials accompanying the book 
-// "The Elements of Computing Systems" by Nisan and Schocken, 
-// MIT Press. Book site: www.idc.ac.il/tecs
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
 // File name: projects/06/max/MaxL.asm
 
 // Symbol-less version of the Max.asm program.
+
 @0
 D=M
 @1
